@@ -1,6 +1,15 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import type { NavItem, PlayerError, RepeatMode, Song } from '../types'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import type {
+  EqualizerBands,
+  NavItem,
+  PlaybackSpeed,
+  PlayerError,
+  RepeatMode,
+  SearchFilter,
+  Song,
+} from '../types'
+import { DEFAULT_EQUALIZER } from '../types'
 import { recentlyPlayedSeed, songs } from '../data/mockMusic'
 import { shuffleArray } from '../utils/shuffle'
 
@@ -11,6 +20,9 @@ interface PlayerState {
   sourcePlaylist: Song[]
   isPlaying: boolean
   volume: number
+  isMuted: boolean
+  volumeBeforeMute: number
+  playbackSpeed: PlaybackSpeed
   repeatMode: RepeatMode
   shuffle: boolean
   likedSongIds: string[]
@@ -18,23 +30,31 @@ interface PlayerState {
   currentTime: number
   duration: number
   isLoading: boolean
+  bufferProgress: number
   error: PlayerError | null
+  replayNonce: number
+  equalizer: EqualizerBands
   showQueue: boolean
   showLyrics: boolean
   fullPlayerOpen: boolean
   hasEnteredApp: boolean
   activeNav: NavItem
   searchQuery: string
+  searchFilter: SearchFilter
   selectedPlaylistId: string | null
 
   setActiveNav: (nav: NavItem) => void
   setSearchQuery: (q: string) => void
+  setSearchFilter: (filter: SearchFilter) => void
   setSelectedPlaylistId: (id: string | null) => void
   enterApp: () => void
   setFullPlayerOpen: (open: boolean) => void
   setShowQueue: (show: boolean) => void
   setShowLyrics: (show: boolean) => void
   setVolume: (v: number) => void
+  toggleMute: () => void
+  setPlaybackSpeed: (speed: PlaybackSpeed) => void
+  cyclePlaybackSpeed: () => void
   setRepeatMode: (mode: RepeatMode) => void
   toggleShuffle: () => void
   toggleLike: (songId: string) => void
@@ -43,6 +63,8 @@ interface PlayerState {
   setDuration: (d: number) => void
   setIsPlaying: (playing: boolean) => void
   setIsLoading: (loading: boolean) => void
+  setBufferProgress: (p: number) => void
+  setEqualizer: (bands: Partial<EqualizerBands>) => void
   setError: (error: PlayerError | null) => void
   playSong: (song: Song, playlist?: Song[]) => void
   playQueue: (queue: Song[], startIndex?: number) => void
@@ -52,7 +74,10 @@ interface PlayerState {
   addToQueue: (song: Song) => void
   removeFromQueue: (index: number) => void
   reorderQueue: (from: number, to: number) => void
+  clearQueue: () => void
   clearError: () => void
+  seekBy: (delta: number) => void
+  adjustVolume: (delta: number) => void
 }
 
 function buildQueue(
@@ -82,6 +107,9 @@ export const usePlayerStore = create<PlayerState>()(
       sourcePlaylist: songs,
       isPlaying: false,
       volume: 0.75,
+      isMuted: false,
+      volumeBeforeMute: 0.75,
+      playbackSpeed: 1,
       repeatMode: 'off',
       shuffle: false,
       likedSongIds: ['s5', 's1', 's10'],
@@ -89,36 +117,77 @@ export const usePlayerStore = create<PlayerState>()(
       currentTime: 0,
       duration: 0,
       isLoading: false,
+      bufferProgress: 0,
       error: null,
+      replayNonce: 0,
+      equalizer: DEFAULT_EQUALIZER,
       showQueue: false,
       showLyrics: false,
       fullPlayerOpen: false,
       hasEnteredApp: false,
       activeNav: 'home',
       searchQuery: '',
+      searchFilter: 'all',
       selectedPlaylistId: null,
 
       setActiveNav: (nav) => set({ activeNav: nav, fullPlayerOpen: false }),
       setSearchQuery: (q) => set({ searchQuery: q }),
+      setSearchFilter: (filter) => set({ searchFilter: filter }),
       setSelectedPlaylistId: (id) => set({ selectedPlaylistId: id }),
       enterApp: () => set({ hasEnteredApp: true }),
       setFullPlayerOpen: (open) => set({ fullPlayerOpen: open }),
       setShowQueue: (show) => set({ showQueue: show }),
       setShowLyrics: (show) => set({ showLyrics: show }),
-      setVolume: (v) => set({ volume: Math.max(0, Math.min(1, v)) }),
+
+      setVolume: (v) => {
+        const vol = Math.max(0, Math.min(1, v))
+        set({
+          volume: vol,
+          isMuted: vol === 0,
+          ...(vol > 0 ? { volumeBeforeMute: vol } : {}),
+        })
+      },
+
+      toggleMute: () => {
+        const { isMuted, volume, volumeBeforeMute } = get()
+        if (isMuted) {
+          const restored = volumeBeforeMute > 0 ? volumeBeforeMute : 0.75
+          set({ isMuted: false, volume: restored })
+        } else {
+          set({
+            isMuted: true,
+            volumeBeforeMute: volume > 0 ? volume : volumeBeforeMute,
+            volume: 0,
+          })
+        }
+      },
+
+      setPlaybackSpeed: (speed) => set({ playbackSpeed: speed }),
+      cyclePlaybackSpeed: () => {
+        const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2] as const
+        const idx = speeds.indexOf(get().playbackSpeed)
+        set({ playbackSpeed: speeds[(idx + 1) % speeds.length] })
+      },
+
       setRepeatMode: (mode) => set({ repeatMode: mode }),
       toggleShuffle: () => set((s) => ({ shuffle: !s.shuffle })),
+
       toggleLike: (songId) =>
         set((s) => ({
           likedSongIds: s.likedSongIds.includes(songId)
             ? s.likedSongIds.filter((id) => id !== songId)
             : [...s.likedSongIds, songId],
         })),
+
       isLiked: (songId) => get().likedSongIds.includes(songId),
+
       setCurrentTime: (t) => set({ currentTime: t }),
       setDuration: (d) => set({ duration: d }),
       setIsPlaying: (playing) => set({ isPlaying: playing }),
       setIsLoading: (loading) => set({ isLoading: loading }),
+      setBufferProgress: (p) => set({ bufferProgress: Math.max(0, Math.min(1, p)) }),
+      setEqualizer: (bands) =>
+        set((s) => ({ equalizer: { ...s.equalizer, ...bands } })),
       setError: (error) => set({ error, isLoading: false }),
       clearError: () => set({ error: null }),
 
@@ -134,6 +203,7 @@ export const usePlayerStore = create<PlayerState>()(
           isLoading: true,
           error: null,
           currentTime: 0,
+          bufferProgress: 0,
           recentlyPlayedIds: addRecent(get().recentlyPlayedIds, song.id),
         })
       },
@@ -150,6 +220,7 @@ export const usePlayerStore = create<PlayerState>()(
           isLoading: true,
           error: null,
           currentTime: 0,
+          bufferProgress: 0,
           recentlyPlayedIds: addRecent(get().recentlyPlayedIds, song.id),
         })
       },
@@ -169,7 +240,11 @@ export const usePlayerStore = create<PlayerState>()(
         if (!currentSong || queue.length === 0) return
 
         if (repeatMode === 'one') {
-          set({ currentTime: 0, isLoading: true })
+          set({
+            currentTime: 0,
+            isLoading: true,
+            replayNonce: get().replayNonce + 1,
+          })
           return
         }
 
@@ -190,6 +265,7 @@ export const usePlayerStore = create<PlayerState>()(
           isPlaying: true,
           isLoading: true,
           currentTime: 0,
+          bufferProgress: 0,
           recentlyPlayedIds: addRecent(get().recentlyPlayedIds, nextSong.id),
         })
       },
@@ -199,7 +275,7 @@ export const usePlayerStore = create<PlayerState>()(
         if (!currentSong) return
 
         if (currentTime > 3) {
-          set({ currentTime: 0 })
+          set({ currentTime: 0, replayNonce: get().replayNonce + 1 })
           return
         }
 
@@ -214,13 +290,14 @@ export const usePlayerStore = create<PlayerState>()(
           isPlaying: true,
           isLoading: true,
           currentTime: 0,
+          bufferProgress: 0,
           recentlyPlayedIds: addRecent(get().recentlyPlayedIds, prevSong.id),
         })
       },
 
       addToQueue: (song) =>
         set((s) => ({
-          queue: [...s.queue, song],
+          queue: s.queue.some((q) => q.id === song.id) ? s.queue : [...s.queue, song],
         })),
 
       removeFromQueue: (index) =>
@@ -228,8 +305,22 @@ export const usePlayerStore = create<PlayerState>()(
           const queue = s.queue.filter((_, i) => i !== index)
           let queueIndex = s.queueIndex
           if (index < queueIndex) queueIndex--
-          if (index === queueIndex && queueIndex >= queue.length) {
-            queueIndex = Math.max(0, queue.length - 1)
+          if (index === queueIndex) {
+            if (queue.length === 0) {
+              return {
+                queue: [],
+                queueIndex: 0,
+                currentSong: null,
+                isPlaying: false,
+              }
+            }
+            if (queueIndex >= queue.length) queueIndex = queue.length - 1
+            return {
+              queue,
+              queueIndex,
+              currentSong: queue[queueIndex] ?? null,
+              isPlaying: s.isPlaying,
+            }
           }
           return { queue, queueIndex }
         }),
@@ -245,16 +336,56 @@ export const usePlayerStore = create<PlayerState>()(
           else if (from > queueIndex && to <= queueIndex) queueIndex++
           return { queue, queueIndex }
         }),
+
+      clearQueue: () =>
+        set((s) => ({
+          queue: s.currentSong ? [s.currentSong] : [],
+          queueIndex: 0,
+        })),
+
+      seekBy: (delta) => {
+        const { currentTime, duration } = get()
+        const max = duration || 0
+        set({ currentTime: Math.max(0, Math.min(max, currentTime + delta)) })
+      },
+
+      adjustVolume: (delta) => {
+        const { volume, isMuted } = get()
+        if (isMuted && delta > 0) {
+          set({ isMuted: false, volume: Math.min(1, get().volumeBeforeMute + delta) })
+          return
+        }
+        get().setVolume(volume + delta)
+      },
     }),
     {
       name: 'aura-player',
+      storage: createJSONStorage(() => window.localStorage),
       partialize: (s) => ({
-        volume: s.volume,
+        volume: s.isMuted ? s.volumeBeforeMute : s.volume,
+        isMuted: s.isMuted,
+        volumeBeforeMute: s.volumeBeforeMute,
         likedSongIds: s.likedSongIds,
         recentlyPlayedIds: s.recentlyPlayedIds,
         shuffle: s.shuffle,
         repeatMode: s.repeatMode,
+        playbackSpeed: s.playbackSpeed,
+        equalizer: s.equalizer,
+        currentSong: s.currentSong,
+        queue: s.queue,
+        queueIndex: s.queueIndex,
+        isPlaying: false,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return
+        if (state.currentSong && state.queue.length === 0) {
+          state.queue = [state.currentSong]
+          state.queueIndex = 0
+        }
+        if (state.isMuted) {
+          state.volume = 0
+        }
+      },
     },
   ),
 )
