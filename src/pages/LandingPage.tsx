@@ -4,6 +4,16 @@ import { Button } from '../components/ui/Button'
 import { usePlayerStore } from '../store/playerStore'
 import { songs } from '../data/mockMusic'
 
+const visualizerBars = Array.from({ length: 32 }, (_, i) => {
+  const seed = Math.sin(i * 12.9898) * 43758.5453
+  const random = seed - Math.floor(seed)
+
+  return {
+    height: `${30 + random * 70}%`,
+    duration: 1 + random,
+  }
+})
+
 export function LandingPage() {
   const enterApp = usePlayerStore((s) => s.enterApp)
   const playSong = usePlayerStore((s) => s.playSong)
@@ -82,13 +92,13 @@ export function LandingPage() {
           transition={{ delay: 0.8 }}
           className="mt-16 flex justify-center gap-1 h-12 items-end"
         >
-          {Array.from({ length: 32 }).map((_, i) => (
+          {visualizerBars.map((bar, i) => (
             <motion.div
               key={i}
               className="w-1 rounded-full bg-gradient-to-t from-[var(--color-accent)] to-transparent"
-              animate={{ height: ['20%', `${30 + Math.random() * 70}%`, '20%'] }}
+              animate={{ height: ['20%', bar.height, '20%'] }}
               transition={{
-                duration: 1 + Math.random(),
+                duration: bar.duration,
                 repeat: Infinity,
                 delay: i * 0.05,
               }}

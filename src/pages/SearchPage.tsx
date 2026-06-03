@@ -28,13 +28,11 @@ export function SearchPage() {
   const recentlyPlayedIds = usePlayerStore((s) => s.recentlyPlayedIds)
 
   const [debounced, setDebounced] = useState(searchQuery)
-  const [loading, setLoading] = useState(false)
+  const loading = searchQuery !== debounced
 
   useEffect(() => {
-    setLoading(true)
     const t = setTimeout(() => {
       setDebounced(searchQuery)
-      setLoading(false)
     }, 400)
     return () => clearTimeout(t)
   }, [searchQuery])

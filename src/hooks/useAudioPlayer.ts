@@ -35,6 +35,8 @@ export function useAudioPlayer() {
   const isPlayingRef = useRef(false)
 
   const currentSong = usePlayerStore((s) => s.currentSong)
+  const currentSongId = currentSong?.id
+  const currentSongAudioUrl = currentSong?.audioUrl
   const queue = usePlayerStore((s) => s.queue)
   const queueIndex = usePlayerStore((s) => s.queueIndex)
   const isPlaying = usePlayerStore((s) => s.isPlaying)
@@ -127,12 +129,12 @@ export function useAudioPlayer() {
 
   useEffect(() => {
     const audio = audioRef.current
-    if (!audio || !currentSong) return
+    if (!audio || !currentSongAudioUrl) return
 
     setIsLoading(true)
     setError(null)
     setBufferProgress(0)
-    audio.src = currentSong.audioUrl
+    audio.src = currentSongAudioUrl
     audio.load()
 
     const updateBuffer = () => {
@@ -193,8 +195,8 @@ export function useAudioPlayer() {
       audio.removeEventListener('stalled', onStalled)
     }
   }, [
-    currentSong?.id,
-    currentSong?.audioUrl,
+    currentSongId,
+    currentSongAudioUrl,
     next,
     playAudio,
     setBufferProgress,
@@ -207,11 +209,11 @@ export function useAudioPlayer() {
 
   useEffect(() => {
     const audio = audioRef.current
-    if (!audio || !currentSong) return
+    if (!audio || !currentSongId) return
 
     if (isPlaying) playAudio()
     else audio.pause()
-  }, [isPlaying, currentSong?.id, playAudio])
+  }, [isPlaying, currentSongId, playAudio])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -250,7 +252,7 @@ export function useAudioPlayer() {
     } else {
       pre.removeAttribute('src')
     }
-  }, [queue, queueIndex, currentSong?.id])
+  }, [queue, queueIndex, currentSongId])
 
   const seek = useCallback(
     (time: number) => {
