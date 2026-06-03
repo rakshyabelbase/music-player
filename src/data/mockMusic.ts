@@ -301,6 +301,7 @@ export function getPlaylistById(id: string): Playlist | undefined {
   return playlists.find((p) => p.id === id)
 }
 
+/** @deprecated Use `searchSongs` from `../utils/search` */
 export function searchSongs(query: string): Song[] {
   const q = query.toLowerCase().trim()
   if (!q) return []
