@@ -27,6 +27,7 @@ export function searchSongs(
       s.title.toLowerCase().includes(q) ||
       s.artistName.toLowerCase().includes(q) ||
       s.albumTitle.toLowerCase().includes(q) ||
-      (s.genre?.toLowerCase().includes(q) ?? false),
+      (s.genre?.toLowerCase().includes(q) ?? false) ||
+      (s.testPurpose?.toLowerCase().includes(q) ?? false),
   )
 }

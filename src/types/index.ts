@@ -49,6 +49,7 @@ export interface Song {
   lyrics?: LyricLine[]
   genre?: string
   plays?: number
+  testPurpose?: string
 }
 
 export interface Playlist {
@@ -59,6 +60,12 @@ export interface Playlist {
   songIds: string[]
   createdBy?: string
   isLiked?: boolean
+}
+
+export interface AudioTestPlanItem {
+  area: string
+  trackIds: string[]
+  checks: string[]
 }
 
 export type NavItem = 'home' | 'search' | 'library' | 'playlists' | 'liked'
