@@ -1,12 +1,23 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { usePlayerStore } from '../store/playerStore'
 
+function canAnalyzeSource(src: string): boolean {
+  if (!src) return false
+
+  try {
+    return new URL(src, window.location.href).origin === window.location.origin
+  } catch {
+    return false
+  }
+}
+
 export function useAudioPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const connectedRef = useRef(false)
+  const isPlayingRef = useRef(false)
 
   const currentSong = usePlayerStore((s) => s.currentSong)
   const isPlaying = usePlayerStore((s) => s.isPlaying)
@@ -18,9 +29,34 @@ export function useAudioPlayer() {
   const setError = usePlayerStore((s) => s.setError)
   const next = usePlayerStore((s) => s.next)
 
+  useEffect(() => {
+    isPlayingRef.current = isPlaying
+  }, [isPlaying])
+
+  const playAudio = useCallback(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    void audio.play().catch((error: unknown) => {
+      setIsPlaying(false)
+      setIsLoading(false)
+      setError({
+        message:
+          error instanceof DOMException && error.name === 'NotAllowedError'
+            ? 'Click the play button once more to start audio in this browser.'
+            : 'Audio could not start. Check the track URL or try another song.',
+        code: 'PLAYBACK_ERROR',
+      })
+    })
+  }, [setError, setIsLoading, setIsPlaying])
+
   const getAnalyser = useCallback(() => {
     const audio = audioRef.current
     if (!audio) return null
+
+    if (!canAnalyzeSource(audio.currentSrc || audio.src)) {
+      return null
+    }
 
     if (!audioContextRef.current) {
       audioContextRef.current = new AudioContext()
@@ -32,7 +68,7 @@ export function useAudioPlayer() {
       void ctx.resume()
     }
 
-    if (!connectedRef.current) {
+    if (!connectedRef.current && !sourceRef.current) {
       try {
         sourceRef.current = ctx.createMediaElementSource(audio)
         analyserRef.current = ctx.createAnalyser()
@@ -42,8 +78,7 @@ export function useAudioPlayer() {
         analyserRef.current.connect(ctx.destination)
         connectedRef.current = true
       } catch {
-        analyserRef.current = ctx.createAnalyser()
-        analyserRef.current.connect(ctx.destination)
+        return null
       }
     }
 
@@ -55,12 +90,13 @@ export function useAudioPlayer() {
     if (!audio || !currentSong) return
 
     setIsLoading(true)
+    setError(null)
     audio.src = currentSong.audioUrl
     audio.load()
 
     const onCanPlay = () => {
       setIsLoading(false)
-      if (isPlaying) void audio.play().catch(() => setIsPlaying(false))
+      if (isPlayingRef.current) playAudio()
     }
 
     const onLoadedMetadata = () => setDuration(audio.duration)
@@ -68,7 +104,8 @@ export function useAudioPlayer() {
     const onEnded = () => next()
     const onError = () =>
       setError({
-        message: 'Failed to load audio. Check your connection and try again.',
+        message:
+          'Failed to load audio. Remote demo tracks need internet access, or you can use a local MP3 from the public folder.',
         code: 'AUDIO_ERROR',
       })
     const onWaiting = () => setIsLoading(true)
@@ -97,19 +134,28 @@ export function useAudioPlayer() {
       audio.removeEventListener('playing', onPlaying)
       audio.removeEventListener('pause', onPause)
     }
-  }, [currentSong?.id])
+  }, [
+    currentSong?.id,
+    currentSong?.audioUrl,
+    next,
+    playAudio,
+    setCurrentTime,
+    setDuration,
+    setError,
+    setIsLoading,
+    setIsPlaying,
+  ])
 
   useEffect(() => {
     const audio = audioRef.current
     if (!audio || !currentSong) return
 
     if (isPlaying) {
-      getAnalyser()
-      void audio.play().catch(() => setIsPlaying(false))
+      playAudio()
     } else {
       audio.pause()
     }
-  }, [isPlaying, currentSong?.id])
+  }, [isPlaying, currentSong?.id, playAudio])
 
   useEffect(() => {
     const audio = audioRef.current

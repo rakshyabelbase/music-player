@@ -56,7 +56,7 @@ function AppShell() {
       onClick={handleInteraction}
       onKeyDown={handleInteraction}
     >
-      <audio ref={audioRef} preload="metadata" crossOrigin="anonymous" />
+      <audio ref={audioRef} preload="metadata" />
 
       <Sidebar />
       <main
