@@ -10,6 +10,8 @@ import { LyricsPanel } from './components/player/LyricsPanel'
 import { ErrorState } from './components/ui/ErrorState'
 import { VolumeSlider } from './components/ui/VolumeSlider'
 import { useAudioPlayer } from './hooks/useAudioPlayer'
+import { useMediaSession } from './hooks/useMediaSession'
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { usePlayerStore } from './store/playerStore'
 import { LandingPage } from './pages/LandingPage'
 import { HomePage } from './pages/HomePage'
@@ -45,8 +47,13 @@ function AppShell() {
   const error = usePlayerStore((s) => s.error)
   const clearError = usePlayerStore((s) => s.clearError)
   const volume = usePlayerStore((s) => s.volume)
+  const isMuted = usePlayerStore((s) => s.isMuted)
   const setVolume = usePlayerStore((s) => s.setVolume)
   const isLoading = usePlayerStore((s) => s.isLoading)
+  const bufferProgress = usePlayerStore((s) => s.bufferProgress)
+
+  useMediaSession()
+  useKeyboardShortcuts(seek)
 
   const handleInteraction = () => resumeContext()
 
@@ -66,8 +73,10 @@ function AppShell() {
         )}
       >
         <header className="hidden md:flex items-center justify-between px-6 py-4 shrink-0 border-b border-white/5">
-          <div />
-          <VolumeSlider value={volume} onChange={setVolume} />
+          <p className="text-xs text-[var(--color-text-muted)]">
+            Space play/pause · ←/→ seek · ↑/↓ volume · M mute
+          </p>
+          <VolumeSlider value={isMuted ? 0 : volume} onChange={setVolume} />
         </header>
 
         <div className="flex-1 overflow-y-auto">
@@ -99,9 +108,11 @@ function AppShell() {
       <LyricsPanel />
 
       {isLoading && currentSong && (
-        <div className="fixed top-4 right-4 z-50 glass px-4 py-2 rounded-full text-sm flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse" />
-          Loading…
+        <div className="fixed top-4 right-4 z-50 glass px-4 py-2 rounded-full text-sm flex items-center gap-3 max-w-xs">
+          <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse shrink-0" />
+          <span className="truncate">
+            Loading… {bufferProgress > 0 && `${Math.round(bufferProgress * 100)}%`}
+          </span>
         </div>
       )}
     </div>

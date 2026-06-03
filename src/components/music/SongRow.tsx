@@ -1,10 +1,12 @@
+import { memo } from 'react'
 import { motion } from 'framer-motion'
-import { Heart, MoreHorizontal, Play } from 'lucide-react'
+import { Heart, Play, ListPlus } from 'lucide-react'
 import type { Song } from '../../types'
 import { usePlayerStore } from '../../store/playerStore'
 import { formatTime } from '../../utils/formatTime'
 import { cn } from '../../utils/cn'
 import { Equalizer } from './Equalizer'
+import { SongContextMenu } from './SongContextMenu'
 
 interface SongRowProps {
   song: Song
@@ -13,8 +15,14 @@ interface SongRowProps {
   showIndex?: boolean
 }
 
-export function SongRow({ song, index, playlist, showIndex = true }: SongRowProps) {
+export const SongRow = memo(function SongRow({
+  song,
+  index,
+  playlist,
+  showIndex = true,
+}: SongRowProps) {
   const playSong = usePlayerStore((s) => s.playSong)
+  const addToQueue = usePlayerStore((s) => s.addToQueue)
   const currentSong = usePlayerStore((s) => s.currentSong)
   const isPlaying = usePlayerStore((s) => s.isPlaying)
   const isLiked = usePlayerStore((s) => s.isLiked)
@@ -86,7 +94,18 @@ export function SongRow({ song, index, playlist, showIndex = true }: SongRowProp
         {isActive && isPlaying ? formatTime(currentTime) : displayDuration}
       </p>
 
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            addToQueue(song)
+          }}
+          className="p-2 rounded-full hover:bg-white/10 sm:hidden"
+          aria-label="Add to queue"
+        >
+          <ListPlus className="w-4 h-4 text-[var(--color-text-muted)]" />
+        </button>
         <button
           type="button"
           onClick={(e) => {
@@ -103,14 +122,8 @@ export function SongRow({ song, index, playlist, showIndex = true }: SongRowProp
             )}
           />
         </button>
-        <button
-          type="button"
-          className="p-2 rounded-full hover:bg-white/10 hidden sm:block"
-          aria-label="More options"
-        >
-          <MoreHorizontal className="w-4 h-4 text-[var(--color-text-muted)]" />
-        </button>
+        <SongContextMenu song={song} />
       </div>
     </motion.div>
   )
-}
+})

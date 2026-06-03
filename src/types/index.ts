@@ -1,5 +1,18 @@
 export type RepeatMode = 'off' | 'all' | 'one'
 
+export type SearchFilter = 'all' | 'recent' | 'liked' | 'trending'
+
+export interface EqualizerBands {
+  bass: number
+  mid: number
+  treble: number
+}
+
+export const DEFAULT_EQUALIZER: EqualizerBands = { bass: 0, mid: 0, treble: 0 }
+
+export const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const
+export type PlaybackSpeed = (typeof PLAYBACK_SPEEDS)[number]
+
 export interface Artist {
   id: string
   name: string
@@ -36,6 +49,7 @@ export interface Song {
   lyrics?: LyricLine[]
   genre?: string
   plays?: number
+  testPurpose?: string
 }
 
 export interface Playlist {
@@ -46,6 +60,12 @@ export interface Playlist {
   songIds: string[]
   createdBy?: string
   isLiked?: boolean
+}
+
+export interface AudioTestPlanItem {
+  area: string
+  trackIds: string[]
+  checks: string[]
 }
 
 export type NavItem = 'home' | 'search' | 'library' | 'playlists' | 'liked'

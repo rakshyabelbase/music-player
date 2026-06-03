@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { motion } from 'framer-motion'
 import {
   SkipBack,
@@ -16,7 +17,7 @@ interface PlayerControlsProps {
   showShuffleRepeat?: boolean
 }
 
-export function PlayerControls({
+export const PlayerControls = memo(function PlayerControls({
   size = 'sm',
   showShuffleRepeat = true,
 }: PlayerControlsProps) {
@@ -117,4 +118,4 @@ export function PlayerControls({
       )}
     </div>
   )
-}
+})

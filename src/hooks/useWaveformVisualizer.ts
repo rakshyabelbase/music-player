@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 
-export function useAudioVisualizer(
+export function useWaveformVisualizer(
   getAnalyser: () => AnalyserNode | null,
   isPlaying: boolean,
 ) {
-  const [frequencyData, setFrequencyData] = useState<Uint8Array>(
-    new Uint8Array(64),
-  )
+  const [waveformData, setWaveformData] = useState<Uint8Array>(new Uint8Array(128))
   const rafRef = useRef<number>(0)
   const dataArrayRef = useRef<Uint8Array | null>(null)
 
@@ -19,12 +17,12 @@ export function useAudioVisualizer(
       }
 
       if (!dataArrayRef.current) {
-        dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount)
+        dataArrayRef.current = new Uint8Array(analyser.fftSize)
       }
 
       const data = dataArrayRef.current
-      analyser.getByteFrequencyData(data as Uint8Array<ArrayBuffer>)
-      setFrequencyData(new Uint8Array([...data]))
+      analyser.getByteTimeDomainData(data as Uint8Array<ArrayBuffer>)
+      setWaveformData(new Uint8Array([...data]))
       rafRef.current = requestAnimationFrame(animate)
     }
 
@@ -36,5 +34,5 @@ export function useAudioVisualizer(
     return () => cancelAnimationFrame(rafRef.current)
   }, [isPlaying, getAnalyser])
 
-  return frequencyData
+  return waveformData
 }
