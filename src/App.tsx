@@ -51,6 +51,7 @@ function AppShell() {
   const setVolume = usePlayerStore((s) => s.setVolume)
   const isLoading = usePlayerStore((s) => s.isLoading)
   const bufferProgress = usePlayerStore((s) => s.bufferProgress)
+  const miniPlayerVisible = usePlayerStore((s) => s.miniPlayerVisible)
 
   useMediaSession()
   useKeyboardShortcuts(seek)
@@ -69,7 +70,7 @@ function AppShell() {
       <main
         className={cn(
           'flex-1 flex flex-col min-w-0 overflow-hidden',
-          currentSong ? 'pb-[72px] md:pb-[88px]' : 'pb-14 md:pb-[88px]',
+          miniPlayerVisible ? 'pb-[72px] md:pb-[88px]' : 'pb-14 md:pb-0',
         )}
       >
         <header className="hidden md:flex items-center justify-between px-6 py-4 shrink-0 border-b border-white/5">
