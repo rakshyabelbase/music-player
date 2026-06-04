@@ -15,13 +15,13 @@ const items: { id: NavItem; icon: typeof Home; label: string }[] = [
 export function MobileNav() {
   const activeNav = usePlayerStore((s) => s.activeNav)
   const setActiveNav = usePlayerStore((s) => s.setActiveNav)
-  const currentSong = usePlayerStore((s) => s.currentSong)
+  const miniPlayerVisible = usePlayerStore((s) => s.miniPlayerVisible)
 
   return (
     <nav
       className={cn(
         'md:hidden fixed left-0 right-0 z-20 glass-strong border-t border-white/10 safe-bottom',
-        currentSong ? 'bottom-[72px]' : 'bottom-0',
+        miniPlayerVisible ? 'bottom-[72px]' : 'bottom-0',
       )}
     >
       <div className="flex items-center justify-around py-2 px-2">
