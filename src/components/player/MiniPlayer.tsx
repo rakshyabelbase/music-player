@@ -1,7 +1,7 @@
 import { memo, useCallback } from 'react'
 import { AnimatePresence, motion, useMotionValue, useTransform } from 'framer-motion'
 import type { PanInfo } from 'framer-motion'
-import { Heart, ListOrdered, Mic2, Maximize2 } from 'lucide-react'
+import { Heart, ListOrdered, Mic2, Maximize2, X } from 'lucide-react'
 import { usePlayerStore } from '../../store/playerStore'
 import { useIsMobile } from '../../hooks/useMediaQuery'
 import { formatTime } from '../../utils/formatTime'
@@ -19,6 +19,7 @@ const SWIPE_UP_THRESHOLD = -80
 export const MiniPlayer = memo(function MiniPlayer({ onSeek }: MiniPlayerProps) {
   const isMobile = useIsMobile()
   const currentSong = usePlayerStore((s) => s.currentSong)
+  const miniPlayerVisible = usePlayerStore((s) => s.miniPlayerVisible)
   const isPlaying = usePlayerStore((s) => s.isPlaying)
   const currentTime = usePlayerStore((s) => s.currentTime)
   const duration = usePlayerStore((s) => s.duration)
@@ -27,6 +28,7 @@ export const MiniPlayer = memo(function MiniPlayer({ onSeek }: MiniPlayerProps) 
   const setFullPlayerOpen = usePlayerStore((s) => s.setFullPlayerOpen)
   const setShowQueue = usePlayerStore((s) => s.setShowQueue)
   const setShowLyrics = usePlayerStore((s) => s.setShowLyrics)
+  const dismissMiniPlayer = usePlayerStore((s) => s.dismissMiniPlayer)
   const isLiked = usePlayerStore((s) => s.isLiked)
   const toggleLike = usePlayerStore((s) => s.toggleLike)
 
@@ -45,7 +47,7 @@ export const MiniPlayer = memo(function MiniPlayer({ onSeek }: MiniPlayerProps) 
 
   return (
     <AnimatePresence>
-      {currentSong && (
+      {currentSong && miniPlayerVisible && (
         <motion.footer
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -173,6 +175,18 @@ export const MiniPlayer = memo(function MiniPlayer({ onSeek }: MiniPlayerProps) 
                 <Maximize2 className="w-4 h-4" />
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                dismissMiniPlayer()
+              }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-white/10 hover:text-white touch-manipulation"
+              aria-label="Close player"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </motion.footer>
       )}
