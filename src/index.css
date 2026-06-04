@@ -41,6 +41,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+button:not(:disabled),
+[role='button']:not([aria-disabled='true']),
+a[href] {
+  cursor: pointer;
+}
+
 .glass {
   background: var(--color-glass);
   backdrop-filter: blur(24px);
