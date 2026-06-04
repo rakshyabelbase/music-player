@@ -37,6 +37,7 @@ interface PlayerState {
   showQueue: boolean
   showLyrics: boolean
   fullPlayerOpen: boolean
+  miniPlayerVisible: boolean
   hasEnteredApp: boolean
   activeNav: NavItem
   searchQuery: string
@@ -49,6 +50,7 @@ interface PlayerState {
   setSelectedPlaylistId: (id: string | null) => void
   enterApp: () => void
   setFullPlayerOpen: (open: boolean) => void
+  dismissMiniPlayer: () => void
   setShowQueue: (show: boolean) => void
   setShowLyrics: (show: boolean) => void
   setVolume: (v: number) => void
@@ -124,6 +126,7 @@ export const usePlayerStore = create<PlayerState>()(
       showQueue: false,
       showLyrics: false,
       fullPlayerOpen: false,
+      miniPlayerVisible: false,
       hasEnteredApp: false,
       activeNav: 'home',
       searchQuery: '',
@@ -136,6 +139,15 @@ export const usePlayerStore = create<PlayerState>()(
       setSelectedPlaylistId: (id) => set({ selectedPlaylistId: id }),
       enterApp: () => set({ hasEnteredApp: true }),
       setFullPlayerOpen: (open) => set({ fullPlayerOpen: open }),
+      dismissMiniPlayer: () =>
+        set({
+          isPlaying: false,
+          isLoading: false,
+          miniPlayerVisible: false,
+          fullPlayerOpen: false,
+          showQueue: false,
+          showLyrics: false,
+        }),
       setShowQueue: (show) => set({ showQueue: show }),
       setShowLyrics: (show) => set({ showLyrics: show }),
 
@@ -201,6 +213,7 @@ export const usePlayerStore = create<PlayerState>()(
           sourcePlaylist: playlist,
           isPlaying: true,
           isLoading: true,
+          miniPlayerVisible: true,
           error: null,
           currentTime: 0,
           bufferProgress: 0,
@@ -218,6 +231,7 @@ export const usePlayerStore = create<PlayerState>()(
           sourcePlaylist: queue,
           isPlaying: true,
           isLoading: true,
+          miniPlayerVisible: true,
           error: null,
           currentTime: 0,
           bufferProgress: 0,
@@ -232,7 +246,7 @@ export const usePlayerStore = create<PlayerState>()(
           if (first) get().playSong(first)
           return
         }
-        set({ isPlaying: !isPlaying })
+        set({ isPlaying: !isPlaying, miniPlayerVisible: true })
       },
 
       next: () => {
@@ -312,6 +326,7 @@ export const usePlayerStore = create<PlayerState>()(
                 queueIndex: 0,
                 currentSong: null,
                 isPlaying: false,
+                miniPlayerVisible: false,
               }
             }
             if (queueIndex >= queue.length) queueIndex = queue.length - 1
@@ -320,6 +335,7 @@ export const usePlayerStore = create<PlayerState>()(
               queueIndex,
               currentSong: queue[queueIndex] ?? null,
               isPlaying: s.isPlaying,
+              miniPlayerVisible: Boolean(queue[queueIndex]),
             }
           }
           return { queue, queueIndex }
